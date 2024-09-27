@@ -1,0 +1,4 @@
+CRDT-> 
+    -gui (week 1 and 2)
+    -mearging ( week 3 and so on)
+    -socket (week 2 and 3)
