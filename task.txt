@@ -2,8 +2,10 @@ CRDT->
     -gui (week 1 and 2)
     -mearging ( week 3 and so on)
     -socket (week 2 and 3)
+MESSAGE->
+    -filename + (operations + cursor position) + tag(if this is a comment of operation)
 
-----------------------SOCKET-------------------------
+--------------------------------SOCKET--------------------------------
 headers->
         <sys/types.h>
         <sys/socket.h>
