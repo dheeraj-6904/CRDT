@@ -2,7 +2,7 @@
 #define EDITOR_CALLBACKS_H
 
 #include <FL/Fl_Widget.H>
-#include <FL/Fl_Text_Editor.H>  // Ensure this is included
+#include <FL/Fl_Text_Editor.H>  
 
 // Function declarations for callback functions
 void open_file_cb(Fl_Widget* w, void* data);

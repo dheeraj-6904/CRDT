@@ -1,8 +1,9 @@
+// Import the headers 
 #include <FL/Fl_Text_Editor.H>  
 #include <FL/Fl_File_Chooser.H>
 #include <FL/fl_ask.H>
 #include <fstream>
-#include <cstdio>  // For remove()
+#include <cstdio>  
 #include "editor_callbacks.h"
 
 
