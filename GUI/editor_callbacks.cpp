@@ -93,7 +93,7 @@ void collab_popup() {
     std::string file_stem = original_file_path.stem().string();  // Get the filename without extension, e.g., "task"
 
     // Define the full path for the collab file in the target directory
-    std::string collab_dir = "/home/dheeraj/CRDT/GUI/collabs/";
+    std::string collab_dir = std::filesystem::current_path().string() +"/collabs/";  //poe
     std::string new_file_path = collab_dir + file_stem + "_collab.txt";
 
     // Ensure the collabs directory exists
@@ -155,7 +155,7 @@ void collab_popup() {
         // Update file path
         std::filesystem::path original_file_path(filename);
         std::string file_stem = original_file_path.stem().string();
-        std::string collab_dir = "/home/dheeraj/CRDT/GUI/collabs/";
+        std::string collab_dir = std::filesystem::current_path().string() +"/collabs/";  //poe
         std::string new_file_path = collab_dir + file_stem + "_collab.txt";
 
         std::ofstream outfile(new_file_path, std::ios::app);
@@ -183,7 +183,8 @@ void collab_popup() {
         // Update file path
         std::filesystem::path original_file_path(filename);
         std::string file_stem = original_file_path.stem().string();
-        std::string collab_dir = "/home/dheeraj/CRDT/GUI/collabs/";
+        std::string collab_dir = std::filesystem::current_path().string() +"/collabs/";  //poe
+
         std::string new_file_path = collab_dir + file_stem + "_collab.txt";
 
         std::vector<std::string> ips;
