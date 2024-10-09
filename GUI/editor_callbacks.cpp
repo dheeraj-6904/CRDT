@@ -16,8 +16,17 @@
 #include <fstream>
 #include <vector>
 #include <filesystem>
-
+#include <boost/asio.hpp>
 #include "editor_callbacks.h" // the header
+
+// Nessasities to check if the IP is valid or not
+#ifdef _WIN32  // for the windoes
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #pragma comment(lib, "Ws2_32.lib")
+#else // for the linux users
+    #include <arpa/inet.h>
+#endif
 
 // curent filename variable
 std::string filename = ""; // Use empty string instead of NULL
@@ -80,6 +89,26 @@ std::string trim(const std::string& str) {
     return str.substr(first, last - first + 1);
 }
 
+// Function to validate IPv4 and IPv6 addresses
+bool is_valid_ip(const std::string& ip) {
+    struct sockaddr_in sa;
+    struct sockaddr_in6 sa6;
+
+    // Try IPv4
+    int result = inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+    if (result == 1) {
+        return true;
+    }
+
+    // Try IPv6
+    result = inet_pton(AF_INET6, ip.c_str(), &(sa6.sin6_addr));
+    if (result == 1) {
+        return true;
+    }
+
+    return false;
+}
+
 // The collab_popup function
 void collab_popup() { 
     // Check if a file has been opened
@@ -130,10 +159,10 @@ void collab_popup() {
     }
     infile.close();
 
-    // Create input field for adding new IP
+    // input field for adding new IP
     Fl_Input* add_input = new Fl_Input(20, 230, 200, 30, "Add IP:");
     
-    // Create Add and Delete buttons
+    // Add, Add and Delete buttons
     Fl_Button* add_button = new Fl_Button(240, 230, 60, 30, "Add");
     Fl_Button* delete_button = new Fl_Button(320, 230, 60, 30, "Delete");
 
@@ -147,6 +176,20 @@ void collab_popup() {
         if (new_ip.empty()) {
             fl_alert("IP address cannot be empty.");
             return;
+        }
+        
+        // Validate the IP address(In case of typos)
+        if (!is_valid_ip(new_ip)) {
+            fl_alert("Invalid IP address. Please enter a valid IPv4 or IPv6 address.");
+            return;
+        }
+
+        // Check for duplicate IP's
+        for (int i = 1; i <= list->size(); ++i) {
+            if (new_ip == list->text(i)) {
+                fl_alert("This IP address is already in the list.");
+                return;
+            }
         }
 
         list->add(new_ip.c_str());
