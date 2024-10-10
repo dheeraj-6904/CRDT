@@ -29,9 +29,8 @@
 #endif
 
 // curent filename variable
-std::string filename = ""; // Use empty string instead of NULL
+std::string filename = ""; // Use empty string instead of NULL(make sure len(filename) is > 0 on  the time of saving a file)
 
-// Function to load a file's content into the text editor
 // Function to load a file's content into the text editor
 void open_file_cb(Fl_Widget* w, void* data) {
     Fl_Text_Editor* editor = (Fl_Text_Editor*)data;
