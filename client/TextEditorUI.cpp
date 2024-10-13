@@ -61,7 +61,7 @@ void split_ip_port(const std::string& input, std::string& ip, std::string& port)
 }
 
 void TextEditorUI::connectToServer() {
-    std::string input = fl_input("Enter server IP:", "10.40.0.11:8080");
+    std::string input = fl_input("Enter server IP:", "10.40.0.11:8070");
 
     split_ip_port(input,ip,port); // Will change in place
     if (!networkManager->connectToServer(ip, std::stoi(port))) {
@@ -153,14 +153,18 @@ void TextEditorUI::cb_open(Fl_Widget* widget, void* data) {
 // to save a file
 void TextEditorUI::cb_save(Fl_Widget* widget, void* data) {
     TextEditorUI* editor = (TextEditorUI*) data;
-    Fl_Native_File_Chooser chooser;
-    chooser.title("Save File");
-    chooser.type(Fl_Native_File_Chooser::BROWSE_SAVE_FILE);
-    if (chooser.show() == 0) {
-        std::string filename = chooser.filename();
-        FileManager fileManager;
-        fileManager.saveFile(filename, editor->textBuffer->text());
+        if(filename == ""){
+        fl_alert("you must open a file before saving");
+        return;
     }
+    std::string responce = editor->networkManager->send_command("SAVE",filename +"-"+std::string(editor->textBuffer->text()));
+    if(responce == "100"){
+        fl_alert(" File Saved susscesfully");
+    }
+    else{
+        fl_alert(responce.c_str());
+    }
+
 }
 
 void TextEditorUI::cb_delete(Fl_Widget* widget, void* data) {

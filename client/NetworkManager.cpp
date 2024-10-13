@@ -36,7 +36,7 @@ void NetworkManager::sendChangeToServer(const std::string& operation, int x, int
 // for taking the files here in client from server
 std::string NetworkManager::get_shared_folder() {
     try {
-        std::string message = "100 NILL"; // 100 to get shared folder
+        std::string message = "SHARED NILL"; // 100 to get shared folder
         boost::asio::write(*socket, boost::asio::buffer(message));
 
         // recive the changes
