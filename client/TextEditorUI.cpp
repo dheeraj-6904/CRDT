@@ -6,7 +6,8 @@
 #include <FL/Fl_Select_Browser.H>
 #include <iostream>
 #include "NetworkManager.h"
-
+#include <FL/Fl_Input.H>
+#include<FL/Fl.H>
 //global variables
 // define IP and port as globle vars
 std::string ip, port,filename = "";
@@ -38,10 +39,11 @@ TextEditorUI::~TextEditorUI() {
 
 void TextEditorUI::createMenuBar() {
     menuBar = new Fl_Menu_Bar(0, 0, 800, 40);
+    menuBar->add("&File/New", FL_CTRL + 'n', cb_new, this);
     menuBar->add("&File/Open", FL_CTRL + 'o', cb_open, this);
     menuBar->add("&File/Save", FL_CTRL + 's', cb_save, this);
     menuBar->add("&File/Delete",FL_CTRL + 'd' , cb_delete, this);
-    menuBar->add("&File/Quit", FL_CTRL + 'q', cb_quit, this);
+    menuBar->add("Quit", FL_CTRL + 'q', cb_quit, this);
 }
 
 void TextEditorUI::show() {
@@ -63,7 +65,7 @@ void split_ip_port(const std::string& input, std::string& ip, std::string& port)
 }
 
 void TextEditorUI::connectToServer() {
-    std::string input = fl_input("Enter server IP:", "10.40.0.11:8070");
+    std::string input = fl_input("Enter server IP:", "10.40.0.36:8070");
 
     split_ip_port(input,ip,port); // Will be changed in place
     if (!networkManager->connectToServer(ip, std::stoi(port))) {
@@ -114,13 +116,13 @@ void TextEditorUI::cb_open(Fl_Widget* widget, void* data) {
     //browser->callback(item_selected_callback);
 
     // Add an "OK" button to confirm selection
-    //Fl_Button* ok_button = new Fl_Button(100, 170, 100, 25, "Open");
+    Fl_Button* ok_button = new Fl_Button(100, 170, 100, 25, "Open");
 
     //Set user_data to pass both browser and editor
     browser->user_data(editor); // Associate the editor with the browser
     
     //Use a non-capturing lambda or static callback
-    browser->callback([](Fl_Widget* widget, void* data) {
+    ok_button->callback([](Fl_Widget* widget, void* data) {
         Fl_Browser* browser = static_cast<Fl_Browser*>(widget->parent()->child(0));  // Get the browser from the parent window
         TextEditorUI* editor = static_cast<TextEditorUI*>(browser->user_data()); // Retrieve editor from user_data
 
@@ -181,28 +183,37 @@ void TextEditorUI::cb_delete(Fl_Widget* widget, void* data) {
     }
 }
 
-// To create new file(yet to tested)
+// To create new file (yet to be tested)
 void TextEditorUI::cb_new(Fl_Widget* widget, void* data) {
-    TextEditorUI* editor = (TextEditorUI*) data;
-    //if some file is opened than save it first
-    if(filename != ""){
-        editor->networkManager->send_command("SAVE",filename);
-    }
+    try {
+        TextEditorUI* editor = (TextEditorUI*) data;
+        
+        // If some file is opened, save it first
+        if (filename != "") {
+            editor->networkManager->send_command("SAVE", filename);
+        }
 
-    // Ask the user to enter the filename for the new file
-    const char* input = fl_input("Enter new filename:", "");
-    if (input == nullptr || std::string(input).empty()) {
-        fl_alert("No filename provided!");
-        return;  // Exit if nofilename isd provided
-    }
-    std::string new_filename = std::string(input);
-    // Now send command to save the file
-    std::string response = editor->networkManager->send_command("CREATE",new_filename +".txt");
-    if(response == "100"){
-        fl_alert((new_filename + " created successfully!" ).c_str());
-    }
-    else{
-        fl_alert((response.c_str()));
+        // Ask the user to enter the filename for the new file
+        const char* input = fl_input("Enter new filename:", "");
+        if (input == nullptr || std::string(input).empty()) {
+            fl_alert("No filename provided!");
+            return;  // Exit if no filename is provided
+        }
+
+        Fl::flush();
+        std::string new_filename = std::string(input);
+
+        // Now send command to save the file
+        std::string response = editor->networkManager->send_command("CREATE", new_filename + ".txt");
+        if (response == "100") {
+            fl_alert((new_filename + " created successfully!").c_str());
+        } else {
+            fl_alert((response.c_str()));
+        }
+    } catch (const std::exception& e) {
+        fl_alert(("An error occurred: " + std::string(e.what())).c_str());
+    } catch (...) {
+        fl_alert("An unknown error occurred!");
     }
 }
 

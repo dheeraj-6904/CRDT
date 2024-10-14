@@ -25,7 +25,7 @@ bool NetworkManager::connectToServer(const std::string& ip, int port) {
 
 void NetworkManager::sendChangeToServer(const std::string& operation, int x, int y) {
     try {
-        std::string message = "Operation: " + operation + " | Cursor: (" + std::to_string(x) + ", " + std::to_string(y) + ")\n";
+        std::string message = "POST " + operation  +" "+ std::to_string(x) + " " + std::to_string(y);
         boost::asio::write(*socket, boost::asio::buffer(message));
         
     } catch (...) {
