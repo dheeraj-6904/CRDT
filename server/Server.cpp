@@ -43,7 +43,14 @@ bool Server::isAuthorized(const std::string& clientIP) {
 
 // Start the server
 void Server::start() {
-    std::cout << "Server started, waiting for connections..." << std::endl;
+    // Display your ip and port 
+    boost::asio::ip::tcp::endpoint endpoint = acceptor->local_endpoint();
+    std::string serverIP = endpoint.address().to_string();
+    int serverPort = endpoint.port();
+
+    // Print the server IP and port
+    std::cout << "Server has been started and is running at IP: " 
+              << serverIP << " on port: " << serverPort << std::endl;
 
     while (true) {
         boost::asio::ip::tcp::socket* socket = new boost::asio::ip::tcp::socket(io_service);
@@ -72,8 +79,8 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
             std::string requestStr(request, len);
 
             std::istringstream iss(requestStr);
-            std::string command1, command2, content;
-            iss >> command1 >> command2;
+            std::string command1, command2, command3,command4,content;
+            iss >> command1 >> command2 >> command3 >> command4;
 
             // Display the request
             std::cout << "Request: " << requestStr << " from: " << socket->remote_endpoint().address().to_string() << "\n";
@@ -84,12 +91,7 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
             else if (command1 == "SHARED") {    
                 SendSharedFolder(socket);
             } 
-            else if (command1 == "POST") {
-                std::getline(iss, content);  // Get the remaining file content
-                handleFileChange(command2, content);
-                std::string clientIP = socket->remote_endpoint().address().to_string();
-                broadcastChange(command2, content, clientIP);
-            }
+
             else if (command1 == "DELETE") {    
                 Delete_File(socket,command2);
             }
@@ -97,13 +99,20 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
                 Save_File(socket,command2); //cmd2 contain filename + file
             }
             else if (command1 == "CREATE") {    
-                Create_file(socket,command2); //cmd2 contain filename + .txt
+                Create_File(socket,command2); //cmd2 contain new file name
             }
 
             else if (command1 == "QUIT") {
                 std::cout << "Client " << socket->remote_endpoint().address().to_string() << " disconnected." << std::endl;
                 break;  // Exit loop, close socket
             }
+            else if (command1 == "POST") {
+                std::getline(iss, content);  // Get the remaining file content
+                handleFileChange(command2, content);
+                std::string clientIP = socket->remote_endpoint().address().to_string();
+                broadcastChange(command2, content, clientIP);
+            }
+
         }
     } catch (...) {
         std::cerr << "Error handling client request." << std::endl;
@@ -156,16 +165,42 @@ void Server::Delete_File(boost::asio::ip::tcp::socket* socket, std::string filen
     }
 }
 
+// Function to create a new file
+void Server::Create_File(boost::asio::ip::tcp::socket* socket, std::string filename) {
+    std::string fullPath = sharedFolder + "/" + filename;
+    try {
+        // if the file already exixt
+        if (std::filesystem::exists(fullPath)) { 
+            std::string response = "file already exixt !"; 
+            boost::asio::write(*socket, boost::asio::buffer(response));
+            std::cout << " requested file already exixst"<<std::endl;
+        } else {
+            std::ofstream file(fullPath);
+            if(file){
+                std::string response = filename +" created sucessfullly !"; 
+                boost::asio::write(*socket, boost::asio::buffer(response));
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::string response = "Error creating new file!! " + std::string(e.what());
+        boost::asio::write(*socket, boost::asio::buffer(response));  // Notify the client of the error
+        std::cerr << "Error creating new file!! " << filename << ": " << e.what() << std::endl;
+    }
+}
+
 // Function to Save a file
 void Server::Save_File(boost::asio::ip::tcp::socket* socket, std::string fileData) {
     std::istringstream iss(fileData);
     std::string filename, content;
 
     // Extract the filename and the content separated by '-'
-    std::getline(iss, filename, '-');  //Extract up to '-'
-    std::getline(iss, content);         // Extract the rest as content
-    std::cout<<fileData<<"\n";
-    std::cout<<filename<<" ------  "<< content<<"\n";
+    std::getline(iss, filename, '-');  
+
+    // Extract the rest as content
+    std::string line;
+std::getline(iss, content, '\0');       
+    // std::cout<<fileData<<"\n";
+    std::cout<<"FILENAME: "<<filename<<"\n"<<"content : "<< content<<std::endl;
 
     std::string fullPath = sharedFolder + "/" + filename;
 
@@ -193,6 +228,8 @@ void Server::Save_File(boost::asio::ip::tcp::socket* socket, std::string fileDat
     }
 }
 
+
+
 // Send file content to the client
 void Server::sendFileContent(boost::asio::ip::tcp::socket* socket, const std::string& filename) {
     std::string fullPath = sharedFolder + "/" + filename;
@@ -212,51 +249,18 @@ void Server::sendFileContent(boost::asio::ip::tcp::socket* socket, const std::st
     file.close();
 }
 
-// Create new file(to be tested yet)
-void Server::Create_file(boost::asio::ip::tcp::socket* socket, const std::string& filename) {
-    std::string fullPath = sharedFolder + "/" + filename;
+// // Handle file changes from clients
+// void Server::handleFileChange(const std::string& filename, const std::string& content) {
+//     std::string fullPath = sharedFolder + "/" + filename;
 
-    try {
-        // Check if the file already exists
-        std::ifstream file(fullPath);
-        if (file.is_open()) {  // Corrected the condition to check if the file exists
-            boost::asio::write(*socket, boost::asio::buffer("File already exists"));
-            file.close();
-            return;
-        }
-        file.close();
-
-        // Create the new file
-        std::ofstream newFile(fullPath);
-        if (newFile.is_open()) {
-            newFile.close();
-            boost::asio::write(*socket, boost::asio::buffer("100")); // success
-        } else {
-            throw std::runtime_error("Error: Could not create the file");
-        }
-
-    } catch (const std::exception& e) {
-        // display the exception
-        std::string errorMessage = std::string("Exception: ") + e.what();
-        boost::asio::write(*socket, boost::asio::buffer(errorMessage));
-    } catch (...) {
-        // Handle any other unexpected errors
-        boost::asio::write(*socket, boost::asio::buffer("Unknown error occurred while creating the file"));
-    }
-}
-
-// Handle file changes from clients
-void Server::handleFileChange(const std::string& filename, const std::string& content) {
-    std::string fullPath = sharedFolder + "/" + filename;
-
-    std::ofstream file(fullPath, std::ios::app);
-    if (file.is_open()) {
-        file << content;
-        file.close();
-    } else {
-        std::cerr << "Failed to write to file: " << filename << std::endl;
-    }
-}
+//     std::ofstream file(fullPath, std::ios::app);
+//     if (file.is_open()) {
+//         file << content;
+//         file.close();
+//     } else {
+//         std::cerr << "Failed to write to file: " << filename << std::endl;
+//     }
+// }
 
 // Broadcast changes to other clients
 void Server::broadcastChange(const std::string& filename, const std::string& content, const std::string& senderIP) {
@@ -281,7 +285,7 @@ void Server::broadcastChange(const std::string& filename, const std::string& con
 int main(int argc, char* argv[]) {
     std::string sharedFolder = "shared_folder";
     std::string ipListFile = "collaborators_ip.txt";
-    int port = 8070;
+    int port = 8080;
 
     try {
         Server server(sharedFolder, ipListFile, port);
@@ -290,6 +294,5 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
     return 0;
 }
