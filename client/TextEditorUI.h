@@ -28,7 +28,7 @@ private:
     static void cb_open(Fl_Widget*, void*);
     static void cb_save(Fl_Widget*, void*);
     static void cb_delete(Fl_Widget*, void*);
-    
+    void cb_new(Fl_Widget* widget, void* data);
     // Text editor callbacks
     static void cb_text_changed(int pos, int inserted, int deleted, int restyled, const char* deleted_text, void* data);
 

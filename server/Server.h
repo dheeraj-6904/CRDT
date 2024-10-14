@@ -35,6 +35,7 @@ private:
     void SendSharedFolder(boost::asio::ip::tcp::socket* socket);
     void Delete_File(boost::asio::ip::tcp::socket* socket,std::string filename);
     void Save_File(boost::asio::ip::tcp::socket* socket, std::string filename) ;
+    void Create_file(boost::asio::ip::tcp::socket* socket, const std::string& filename);
 };
 
 #endif

@@ -2,6 +2,7 @@
 #include "FileManager.h"
 #include <FL/Fl_Native_File_Chooser.H>
 #include <FL/Fl_Browser.H>
+#include <FL/fl_ask.H>
 #include <FL/Fl_Select_Browser.H>
 #include <iostream>
 #include "NetworkManager.h"
@@ -9,6 +10,7 @@
 //global variables
 // define IP and port as globle vars
 std::string ip, port,filename = "";
+
 TextEditorUI::TextEditorUI() {
     // Create the main window and editor
     window = new Fl_Window(800, 600, "Collaborative Text Editor");
@@ -17,7 +19,7 @@ TextEditorUI::TextEditorUI() {
     editor->buffer(textBuffer);
 
     // Set callback for text changes
-    textBuffer->add_modify_callback(cb_text_changed, this);
+    textBuffer->add_modify_callback(cb_text_changed, this);  // will do main thing ⭐⭐✡️
     
     // Create the menu bar
     createMenuBar();
@@ -36,10 +38,10 @@ TextEditorUI::~TextEditorUI() {
 
 void TextEditorUI::createMenuBar() {
     menuBar = new Fl_Menu_Bar(0, 0, 800, 40);
-    menuBar->add("&File/Open", 0, cb_open, this);
-    menuBar->add("&File/Save", 0, cb_save, this);
-    menuBar->add("&File/Delete", 0, cb_delete, this);
-    menuBar->add("&File/Quit", 0, cb_quit, this);
+    menuBar->add("&File/Open", FL_CTRL + 'o', cb_open, this);
+    menuBar->add("&File/Save", FL_CTRL + 's', cb_save, this);
+    menuBar->add("&File/Delete",FL_CTRL + 'd' , cb_delete, this);
+    menuBar->add("&File/Quit", FL_CTRL + 'q', cb_quit, this);
 }
 
 void TextEditorUI::show() {
@@ -51,23 +53,22 @@ void TextEditorUI::show() {
 void split_ip_port(const std::string& input, std::string& ip, std::string& port) {
     size_t colon_pos = input.find(':');
     if (colon_pos != std::string::npos) {
-        ip = input.substr(0, colon_pos);       // Extract the ip part
-        port = input.substr(colon_pos + 1);     // Extract the port part
+        ip = input.substr(0, colon_pos);      
+        port = input.substr(colon_pos + 1);     
     } else {
         fl_alert("Trying to connect with default ip and port");
         ip = input;   // If no port is provided, just use the input as IP
-        port = "8080"; // Default Locanhost  port if none is provided
+        port = "8080"; // and 8080 as the dafault port
     }
 }
 
 void TextEditorUI::connectToServer() {
     std::string input = fl_input("Enter server IP:", "10.40.0.11:8070");
 
-    split_ip_port(input,ip,port); // Will change in place
+    split_ip_port(input,ip,port); // Will be changed in place
     if (!networkManager->connectToServer(ip, std::stoi(port))) {
         fl_alert("Unable to connect to server!");
-        // Implement saving logic before u exit
-        exit(0);                                 // exit if not connected 
+        exit(0); // exit if not connected 
     }
 }
 
@@ -112,8 +113,6 @@ void TextEditorUI::cb_open(Fl_Widget* widget, void* data) {
     browser->user_data(editor);
     //browser->callback(item_selected_callback);
 
-    
-    
     // Add an "OK" button to confirm selection
     //Fl_Button* ok_button = new Fl_Button(100, 170, 100, 25, "Open");
 
@@ -182,17 +181,45 @@ void TextEditorUI::cb_delete(Fl_Widget* widget, void* data) {
     }
 }
 
-void TextEditorUI::cb_quit(Fl_Widget* widget, void* data) {
+// To create new file(yet to tested)
+void TextEditorUI::cb_new(Fl_Widget* widget, void* data) {
     TextEditorUI* editor = (TextEditorUI*) data;
-    std::string responce = editor->networkManager->send_command("QUIT","NILL");
-    if(responce == "99"){
-        fl_alert(" File deleted susscesfully");
+    //if some file is opened than save it first
+    if(filename != ""){
+        editor->networkManager->send_command("SAVE",filename);
+    }
+
+    // Ask the user to enter the filename for the new file
+    const char* input = fl_input("Enter new filename:", "");
+    if (input == nullptr || std::string(input).empty()) {
+        fl_alert("No filename provided!");
+        return;  // Exit if nofilename isd provided
+    }
+    std::string new_filename = std::string(input);
+    // Now send command to save the file
+    std::string response = editor->networkManager->send_command("CREATE",new_filename +".txt");
+    if(response == "100"){
+        fl_alert((new_filename + " created successfully!" ).c_str());
     }
     else{
-        fl_alert(" Error in deleting the file");
+        fl_alert((response.c_str()));
     }
-    exit(0);
 }
+
+void TextEditorUI::cb_quit(Fl_Widget* widget, void* data) {
+    TextEditorUI* editor = (TextEditorUI*) data;
+
+    // ask once if the user is sure to exit
+    int response = fl_choice("Are you sure you want to exit?", "No", "Yes", 0);
+
+    // If user selects "Yes" (button index 1), proceed to quit
+    if (response == 1) {
+        std::string responce = editor->networkManager->send_command("QUIT", "NILL");
+        exit(0);
+    }
+    // Otherwise, do nothing (in case of responce equal to 0)
+}
+
 
 // Text change callback
 void TextEditorUI::cb_text_changed(int pos, int inserted, int deleted, int restyled, const char* deleted_text, void* data) {

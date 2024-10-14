@@ -96,6 +96,9 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
             else if (command1 == "SAVE") {    
                 Save_File(socket,command2); //cmd2 contain filename + file
             }
+            else if (command1 == "CREATE") {    
+                Create_file(socket,command2); //cmd2 contain filename + .txt
+            }
 
             else if (command1 == "QUIT") {
                 std::cout << "Client " << socket->remote_endpoint().address().to_string() << " disconnected." << std::endl;
@@ -190,8 +193,6 @@ void Server::Save_File(boost::asio::ip::tcp::socket* socket, std::string fileDat
     }
 }
 
-
-
 // Send file content to the client
 void Server::sendFileContent(boost::asio::ip::tcp::socket* socket, const std::string& filename) {
     std::string fullPath = sharedFolder + "/" + filename;
@@ -209,6 +210,39 @@ void Server::sendFileContent(boost::asio::ip::tcp::socket* socket, const std::st
     boost::asio::write(*socket, boost::asio::buffer(content));
     std::cout << filename << " data sent" << std::endl;
     file.close();
+}
+
+// Create new file(to be tested yet)
+void Server::Create_file(boost::asio::ip::tcp::socket* socket, const std::string& filename) {
+    std::string fullPath = sharedFolder + "/" + filename;
+
+    try {
+        // Check if the file already exists
+        std::ifstream file(fullPath);
+        if (file.is_open()) {  // Corrected the condition to check if the file exists
+            boost::asio::write(*socket, boost::asio::buffer("File already exists"));
+            file.close();
+            return;
+        }
+        file.close();
+
+        // Create the new file
+        std::ofstream newFile(fullPath);
+        if (newFile.is_open()) {
+            newFile.close();
+            boost::asio::write(*socket, boost::asio::buffer("100")); // success
+        } else {
+            throw std::runtime_error("Error: Could not create the file");
+        }
+
+    } catch (const std::exception& e) {
+        // display the exception
+        std::string errorMessage = std::string("Exception: ") + e.what();
+        boost::asio::write(*socket, boost::asio::buffer(errorMessage));
+    } catch (...) {
+        // Handle any other unexpected errors
+        boost::asio::write(*socket, boost::asio::buffer("Unknown error occurred while creating the file"));
+    }
 }
 
 // Handle file changes from clients
