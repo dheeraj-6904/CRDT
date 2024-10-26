@@ -8,6 +8,8 @@
 #include "NetworkManager.h"
 #include <FL/Fl_Input.H>
 #include<FL/Fl.H>
+#include <nlohmann/json.hpp>
+
 //global variables
 // define IP and port as globle vars
 std::string ip, port,filename = "";
@@ -67,10 +69,11 @@ void split_ip_port(const std::string& input, std::string& ip, std::string& port)
 void TextEditorUI::connectToServer() {
     std::string input = fl_input("Enter server IP:", "10.40.0.36:8070");
 
-    split_ip_port(input,ip,port); // Will be changed in place
+    split_ip_port(input, ip, port); // Will be changed in place
     if (!networkManager->connectToServer(ip, std::stoi(port))) {
         fl_alert("Unable to connect to server!");
-        exit(0); // exit if not connected 
+        //window->hide(); // Hide the window before exiting
+        exit(0); // exit if not connected
     }
 }
 
@@ -159,12 +162,8 @@ void TextEditorUI::cb_save(Fl_Widget* widget, void* data) {
         return;
     }
     std::string responce = editor->networkManager->send_command("SAVE",filename +"-"+std::string(editor->textBuffer->text()));
-    if(responce == "100"){
-        fl_alert(" File Saved susscesfully");
-    }
-    else{
-        fl_alert(responce.c_str());
-    }
+    // diaplay the responce
+    fl_alert(responce.c_str());
 
 }
 
@@ -233,11 +232,51 @@ void TextEditorUI::cb_quit(Fl_Widget* widget, void* data) {
 
 
 // Text change callback
+// void TextEditorUI::cb_text_changed(int pos, int inserted, int deleted, int restyled, const char* deleted_text, void* data) {
+//     TextEditorUI* editor = (TextEditorUI*) data;
+//     int x = editor->editor->insert_position();  // Current cursor position
+//     int y = 0; // Could map row/column later
+
+//     std::string changeOperation = editor->textBuffer->text_range(pos, pos + inserted);
+//     editor->networkManager->sendChangeToServer(changeOperation, x, y);
+// }
+
+
+
 void TextEditorUI::cb_text_changed(int pos, int inserted, int deleted, int restyled, const char* deleted_text, void* data) {
     TextEditorUI* editor = (TextEditorUI*) data;
-    int x = editor->editor->insert_position();  // Current cursor position
-    int y = 0; // Could map row/column later
+    int cursor_position = editor->editor->insert_position();  // Current cursor position
 
-    std::string changeOperation = editor->textBuffer->text_range(pos, pos + inserted);
-    editor->networkManager->sendChangeToServer(changeOperation, x, y);
+    // Calculate line number and position within the line
+    int line_number = 1;
+    int position_within_line = 0;
+    for (int i = 0; i < cursor_position; i++) {
+        if (editor->textBuffer->char_at(i) == '\n') {
+            line_number++;
+            position_within_line = 0;
+        } else {
+            position_within_line++;
+        }
+    }
+
+    int x = position_within_line;
+    int y = line_number;
+
+    // Prepare message
+    std::string message; 
+
+    if (inserted > 0) {
+        // Insert operation
+        std::string changeOperation = editor->textBuffer->text_range(pos, pos + inserted);
+        message = "INSERT" +filename +" "+ changeOperation + " " + std::to_string(x) + "-" + std::to_string(y); // Convert x and y to strings
+    } 
+    else if (deleted > 0) {
+        // Delete operation
+        message = std::string("DELETE "  + filename +" "+ std::to_string(x) + "-" + std::to_string(y)); // Convert x and y to strings
+    }
+
+    // Send message to server
+    editor->networkManager->sendChangeToServer(message);
 }
+
+

@@ -10,7 +10,7 @@ public:
     ~NetworkManager();
     
     bool connectToServer(const std::string& ip, int port);
-    void sendChangeToServer(const std::string& operation, int x, int y);
+    void sendChangeToServer(const std::string& operation);
     std::string receiveData();  // Receive data from server
 
     std::string get_shared_folder(); // to get the shared folder
