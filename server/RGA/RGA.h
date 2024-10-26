@@ -20,7 +20,7 @@ struct RGANode {
 // RGA class for managing the array
 class RGA {
 public:
-    RGA();  // Constructor
+    RGA(std::string);  // Constructor
 
     // Insert a character after a specific node
     void insert(const std::string& id, const std::string& prevId, const std::string& value);
@@ -35,10 +35,10 @@ public:
     std::string getState() const;
 
     // Function to generate RGA structure from a file 
-    void createRGAFromFile(const std::string& filename);
+    void createRGAFromFile();
 
     // Function to save the RGA structure to a file
-    void writeToFile();
+    bool writeToFile();
     
 
 private:
