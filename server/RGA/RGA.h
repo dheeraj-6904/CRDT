@@ -21,6 +21,7 @@ struct RGANode {
 class RGA {
 public:
     RGA(std::string);  // Constructor
+    int nodes_size;
 
     // Insert a character after a specific node
     void insert(const std::string& id, const std::string& prevId, const std::string& value);

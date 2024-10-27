@@ -247,32 +247,17 @@ void TextEditorUI::cb_text_changed(int pos, int inserted, int deleted, int resty
     TextEditorUI* editor = (TextEditorUI*) data;
     int cursor_position = editor->editor->insert_position();  // Current cursor position
 
-    // Calculate line number and position within the line
-    int line_number = 1;
-    int position_within_line = 0;
-    for (int i = 0; i < cursor_position; i++) {
-        if (editor->textBuffer->char_at(i) == '\n') {
-            line_number++;
-            position_within_line = 0;
-        } else {
-            position_within_line++;
-        }
-    }
-
-    int x = position_within_line;
-    int y = line_number;
-
     // Prepare message
     std::string message; 
 
     if (inserted > 0) {
         // Insert operation
         std::string changeOperation = editor->textBuffer->text_range(pos, pos + inserted);
-        message = "INSERT" +filename +" "+ changeOperation + " " + std::to_string(x) + "-" + std::to_string(y); // Convert x and y to strings
+        message = "INSERT" +filename +" "+ changeOperation + " " + std::to_string(cursor_position) ; 
     } 
     else if (deleted > 0) {
         // Delete operation
-        message = std::string("DELETE "  + filename +" "+ std::to_string(x) + "-" + std::to_string(y)); // Convert x and y to strings
+        message = std::string("DELETE "  + filename +" "+ std::to_string(cursor_position) ); 
     }
 
     // Send message to server

@@ -1,10 +1,13 @@
 #include "RGA.h"
 #include<fstream>
 #include <iostream>
+#include <sstream>
+
 RGA::RGA(std::string filename) {
     // Initialize the RGA with a head node
     this->filename = filename;  // Store the filename 
     nodes.push_back(RGANode("", "head", ""));  // Head node with empty value
+    nodes_size = nodes.size();  // Initialize the size of the RGA
 }
 
 void RGA::insert(const std::string& id, const std::string& prevId, const std::string& value) {
@@ -24,6 +27,7 @@ void RGA::erase(const std::string& id) {
     // Mark the node as deleted (logical deletion)
     if (nodeIndex.has_value()) {
         nodes[nodeIndex.value()].isDeleted = true;
+        nodes.erase(nodes.begin() + nodeIndex.value()); /// crusial thing ⭐⭐💀
     }
 }
 

@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 #include <boost/asio.hpp>
-
+#include <RGA/RGA.h>
 class Server {
 public:
     Server(const std::string& sharedFolder, const std::string& ipListFile, int port);
@@ -20,9 +20,11 @@ private:
     boost::asio::ip::tcp::acceptor* acceptor;
     
     std::map<std::string, std::ofstream> openFiles;  // Keeps track of file streams
+    std::map<std::string, RGA> rgaFiles;  // RGA instances for each file
 
     // Helper functions
     void loadAuthorizedIPs(const std::string& ipListFile);
+    void loadRGAFilesFromFolder();
     bool isAuthorized(const std::string& clientIP);
     void handleClient(boost::asio::ip::tcp::socket* socket);
     void sendFileContent(boost::asio::ip::tcp::socket* socket, const std::string& filename);

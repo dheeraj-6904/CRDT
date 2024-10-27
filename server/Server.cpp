@@ -8,10 +8,13 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "RGA/RGA.h"
 // Constructor
 Server::Server(const std::string& sharedFolder, const std::string& ipListFile, int port)
     : sharedFolder(sharedFolder) {
+    // load authorized IPs from file and RGA files from shared folder
     loadAuthorizedIPs(ipListFile);
+    loadRGAFilesFromFolder();
     acceptor = new boost::asio::ip::tcp::acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
 }
 
@@ -20,7 +23,22 @@ Server::~Server() {
     delete acceptor;
 }
 
-// Load authorized IPs from a file
+// function to load files from shared folder to rga instances
+void Server::loadRGAFilesFromFolder() {
+    try {
+        std::filesystem::path folderPath(sharedFolder);
+        for (const auto& entry : std::filesystem::directory_iterator(folderPath)) {
+            if (entry.is_regular_file()) {
+                std::string filename = entry.path().filename().string();
+                rgaFiles[filename] = RGA(filename);
+                rgaFiles[filename].createRGAFromFile();
+            }
+        }
+    } 
+    catch (const std::exception& e) {
+        std::cerr << "Error loading RGA files from folder: " << e.what() << std::endl;
+    }
+}
 void Server::loadAuthorizedIPs(const std::string& ipListFile) {
     std::ifstream ipFile(ipListFile);
     std::string ip;
@@ -96,7 +114,7 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
                 Delete_File(socket,command2);
             }
             else if (command1 == "SAVE") {    
-                Save_File(socket,command2); //cmd2 contain filename + file
+                Save_File(socket,command2); //cmd2 contain filename 
             }
             else if (command1 == "CREATE") {    
                 Create_File(socket,command2); //cmd2 contain new file name
@@ -106,11 +124,9 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
                 std::cout << "Client " << socket->remote_endpoint().address().to_string() << " disconnected." << std::endl;
                 break;  // Exit loop, close socket
             }
-            else if (command1 == "POST") {
-                std::getline(iss, content);  // Get the remaining file content
-                handleFileChange(command2, content);
-                std::string clientIP = socket->remote_endpoint().address().to_string();
-                broadcastChange(command2, content, clientIP);
+            else if (command1 == "INSERT") {
+                std::string id = std::to_string(rgaFiles[command2].nodes_size);
+                rgaFiles[command2].insert(id,command3);
             }
 
         }
@@ -153,6 +169,10 @@ void Server::Delete_File(boost::asio::ip::tcp::socket* socket, std::string filen
             std::string response = "100"; // 100 means suscess
             boost::asio::write(*socket, boost::asio::buffer(response));
             std::cout << "File " << filename << " deleted from shared folder.\n";
+
+            // Remove the RGA instance from the map
+            rgaFiles.erase(filename);  
+
         } else {
             std::string response = "Error: File " + filename + " not found.\n";
             boost::asio::write(*socket, boost::asio::buffer(response));  
@@ -179,6 +199,10 @@ void Server::Create_File(boost::asio::ip::tcp::socket* socket, std::string filen
             if(file){
                 std::string response = filename +" created sucessfullly !"; 
                 boost::asio::write(*socket, boost::asio::buffer(response));
+
+                // also create the rga to to the file
+                rgaFiles[filename] = RGA(filename);  // Create a new RGA instance for the file
+                std::cout << "File " << filename << " created in shared folder."<<std::endl;
             }
         }
     } catch (const std::filesystem::filesystem_error& e) {
@@ -189,64 +213,29 @@ void Server::Create_File(boost::asio::ip::tcp::socket* socket, std::string filen
 }
 
 // Function to Save a file
-void Server::Save_File(boost::asio::ip::tcp::socket* socket, std::string fileData) {
-    std::istringstream iss(fileData);
-    std::string filename, content;
-
-    // Extract the filename and the content separated by '-'
-    std::getline(iss, filename, '-');  
-
-    // Extract the rest as content
-    std::string line;
-std::getline(iss, content, '\0');       
-    // std::cout<<fileData<<"\n";
-    std::cout<<"FILENAME: "<<filename<<"\n"<<"content : "<< content<<std::endl;
-
-    std::string fullPath = sharedFolder + "/" + filename;
-
-    try {
-        // Open the file and write the content
-        std::ofstream file(fullPath, std::ios::out | std::ios::trunc);  // Overwrite the file if it exists
-        if (file.is_open()) {
-            file << content;  // Write the content to the file
-            file.close();
-
-            // Notify the client that the save was successful
-            std::string response = "100";  // 100 means success
-            boost::asio::write(*socket, boost::asio::buffer(response));
-            std::cout << "File " << filename << " saved with new content.\n";
-        } else {
-            // If the file cannot be opened or created
-            std::string response = "Error: Could not open file " + filename + " for writing.\n";
-            boost::asio::write(*socket, boost::asio::buffer(response));
-            std::cerr << "Error: Could not open file " << filename << " for writing.\n";
-        }
-    } catch (const std::filesystem::filesystem_error& e) {
-        std::string response = "Error saving file: " + std::string(e.what()) + "\n";
-        boost::asio::write(*socket, boost::asio::buffer(response));  // Notify the client of the error
-        std::cerr << "Error saving file " << filename << ": " << e.what() << std::endl;
+void Server::Save_File(boost::asio::ip::tcp::socket* socket, std::string filename) {
+    // check if the file exist in rgafiles
+    if (rgaFiles.find(filename) == rgaFiles.end()) {
+        std::string response = "Error: File " + filename + " not found in RGA instances.\n";
+        boost::asio::write(*socket, boost::asio::buffer(response));
+        std::cerr << "Error: File " << filename << " not found in RGA instances.\n";
+        return;
     }
+    // get the respective rga and write to file
+    rgaFiles[filename].writeToFile();
 }
 
 
 
 // Send file content to the client
 void Server::sendFileContent(boost::asio::ip::tcp::socket* socket, const std::string& filename) {
-    std::string fullPath = sharedFolder + "/" + filename;
-    std::ifstream file(fullPath);
-
-    if (!file.is_open()) {
-        std::cerr << "Could not open file: " << fullPath << std::endl;
+    if (rgaFiles.find(filename) == rgaFiles.end()) {
+        std::cerr << " cant find the rga of the file: " << filename << std::endl;
         return;
     }
-
-    std::ostringstream oss;
-    oss << file.rdbuf();
-    std::string content = oss.str();
-
-    boost::asio::write(*socket, boost::asio::buffer(content));
+    std::string filecontent = rgaFiles[filename].getState();  // Get the file content from the RGA
+    boost::asio::write(*socket, boost::asio::buffer(filecontent));
     std::cout << filename << " data sent" << std::endl;
-    file.close();
 }
 
 // // Handle file changes from clients
