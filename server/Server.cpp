@@ -113,8 +113,9 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
             else if (command1 == "DELETE") {    
                 Delete_File(socket,command2);
             }
-            else if (command1 == "SAVE") {    
-                Save_File(socket,command2); //cmd2 contain filename 
+            else if (command1 == "SAVE") { 
+                std::cout<<"saving file " << command2<<std::endl;   
+                Save_File(socket,command2); //cmd2 contain filename
             }
             else if (command1 == "CREATE") {    
                 Create_File(socket,command2); //cmd2 contain new file name
@@ -126,7 +127,8 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
             }
             else if (command1 == "INSERT") {
                 std::string id = std::to_string(rgaFiles[command2].nodes_size);
-                rgaFiles[command2].insert(id,command3);
+                std::string prevID = rgaFiles[command2].getIthNode(std::stoi(command4));
+                rgaFiles[command2].insert(id,prevID,command3);
             }
 
         }
@@ -136,6 +138,7 @@ void Server::handleClient(boost::asio::ip::tcp::socket* socket) {
 
     delete socket;  // Clean up socket after client disconnects
 }
+
 
 // Function to get list of files in shared folder
 std::string listFilesInFolder(const std::string& folderPath) {
@@ -216,13 +219,16 @@ void Server::Create_File(boost::asio::ip::tcp::socket* socket, std::string filen
 void Server::Save_File(boost::asio::ip::tcp::socket* socket, std::string filename) {
     // check if the file exist in rgafiles
     if (rgaFiles.find(filename) == rgaFiles.end()) {
+        std::cout<<"check";
         std::string response = "Error: File " + filename + " not found in RGA instances.\n";
         boost::asio::write(*socket, boost::asio::buffer(response));
         std::cerr << "Error: File " << filename << " not found in RGA instances.\n";
         return;
     }
     // get the respective rga and write to file
+
     rgaFiles[filename].writeToFile();
+    std::cout<<"check";
 }
 
 

@@ -7,7 +7,7 @@ LDFLAGS = `fltk-config --ldflags` -lboost_system -lboost_thread
 TARGET = editor
 
 # Source files and object files
-SRCS = main.cpp TextEditorUI.cpp NetworkManager.cpp FileManager.cpp
+SRCS = main.cpp TextEditorUI.cpp NetworkManager.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Default target

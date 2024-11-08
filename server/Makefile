@@ -7,7 +7,7 @@ LDFLAGS = -lboost_system -lboost_thread
 TARGET = server
 
 # Source files and object files
-SRCS = Server.cpp
+SRCS = Server.cpp RGA/RGA.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Default target

@@ -27,7 +27,6 @@ void RGA::erase(const std::string& id) {
     // Mark the node as deleted (logical deletion)
     if (nodeIndex.has_value()) {
         nodes[nodeIndex.value()].isDeleted = true;
-        nodes.erase(nodes.begin() + nodeIndex.value()); /// crusial thing ⭐⭐💀
     }
 }
 
@@ -47,6 +46,7 @@ void RGA::merge(const RGA& otherRGA) {
         }
     }
 }
+
 // Return the current state of the RGA as a string(will bw used in saving of files and later merging)
 std::string RGA::getState() const {
     std::string result;
@@ -88,6 +88,7 @@ bool RGA::writeToFile() {
             throw std::runtime_error("Failed to open file: " + filename);
         }
         std::string state = getState();     
+        std::cout<<state;
         file << state;
         file.close();
     } 
@@ -105,4 +106,12 @@ std::optional<size_t> RGA::findNodeIndex(const std::string& id) const {
         }
     }
     return std::nullopt;
+}
+
+// function to get ith node from starting
+std::string RGA::getIthNode(int i) {
+    if(i >= 0 && i < nodes_size){
+        return nodes[i].id;
+    }
+    return "ERROR : (get ith node)";
 }

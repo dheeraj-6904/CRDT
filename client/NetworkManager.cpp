@@ -3,6 +3,7 @@
 #include <iostream>
 
 NetworkManager::NetworkManager() {
+    // Initialize a socket connection
     socket = new boost::asio::ip::tcp::socket(io_service);
 }
 
@@ -10,6 +11,7 @@ NetworkManager::~NetworkManager() {
     delete socket;
 }
 
+// connect to server using socket connection(IP + Port number)
 bool NetworkManager::connectToServer(const std::string& ip, int port) {
     try {
         boost::asio::ip::tcp::resolver resolver(io_service);
@@ -61,7 +63,6 @@ std::string NetworkManager::load_file(std::string filename) {
         std::cout<<"requesting : "<<message<< std::endl;
 
         boost::asio::write(*socket, boost::asio::buffer(message));
-        //std::cout<<" request sent to socket"<<std::endl;
 
         // recive the changes
         std::string data = receiveData();
@@ -74,25 +75,24 @@ std::string NetworkManager::load_file(std::string filename) {
     }
 }
 
-
-// general function for sending commands
+// General function for sending commands
 std::string NetworkManager::send_command(std::string command1,std::string command2) {
     try {
         if (!socket->is_open()) {
             std::cerr << "Socket is closed!" << std::endl;
-            std::cout<<"socket closed";
+            std::cout<<"Socket closed";
             return "";
         }
 
         std::string message = command1  +" " + command2; // the command
-        std::cout<<"requesting : "<<message<< std::endl;
+        std::cout<<"Requesting : "<<message<< std::endl;
 
+        // Write the message to the socket
         boost::asio::write(*socket, boost::asio::buffer(message));
-        //std::cout<<" request sent to socket"<<std::endl;
 
-        // recive the changes
+        // Recive the changes
         std::string data = receiveData();
-        std::cout<<"data received "<<std::endl;
+        std::cout<<"Data received "<<std::endl;
         return data;  
     } 
 
@@ -101,6 +101,7 @@ std::string NetworkManager::send_command(std::string command1,std::string comman
     }
 }
 
+// Function to receive any kind of data from server
 std::string NetworkManager::receiveData() {
     char reply[1048];
     size_t reply_length = socket->read_some(boost::asio::buffer(reply));

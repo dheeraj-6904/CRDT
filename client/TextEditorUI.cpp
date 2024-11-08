@@ -1,5 +1,4 @@
 #include "TextEditorUI.h"
-#include "FileManager.h"
 #include <FL/Fl_Native_File_Chooser.H>
 #include <FL/Fl_Browser.H>
 #include <FL/fl_ask.H>
@@ -8,10 +7,9 @@
 #include "NetworkManager.h"
 #include <FL/Fl_Input.H>
 #include<FL/Fl.H>
-#include <nlohmann/json.hpp>
 
-//global variables
-// define IP and port as globle vars
+// Global variables
+// Define IP and port as globle vars
 std::string ip, port,filename = "";
 
 TextEditorUI::TextEditorUI() {
@@ -39,6 +37,7 @@ TextEditorUI::~TextEditorUI() {
     delete networkManager;
 }
 
+// Create the menubar
 void TextEditorUI::createMenuBar() {
     menuBar = new Fl_Menu_Bar(0, 0, 800, 40);
     menuBar->add("&File/New", FL_CTRL + 'n', cb_new, this);
@@ -67,34 +66,16 @@ void split_ip_port(const std::string& input, std::string& ip, std::string& port)
 }
 
 void TextEditorUI::connectToServer() {
-    std::string input = fl_input("Enter server IP:", "10.40.0.36:8070");
+    std::string input = fl_input("Enter server IP:", "0.0.0.0:8080");
 
     split_ip_port(input, ip, port); // Will be changed in place
     if (!networkManager->connectToServer(ip, std::stoi(port))) {
         fl_alert("Unable to connect to server!");
-        //window->hide(); // Hide the window before exiting
         exit(0); // exit if not connected
     }
 }
 
-// Menu callbacks
-// void TextEditorUI::cb_open(Fl_Widget* widget, void* data) {
-//     TextEditorUI* editor = (TextEditorUI*) data;
-//     Fl_Native_File_Chooser chooser;
-//     chooser.title("Open File");
-//     //chooser.type(Fl_Native_File_Chooser::BROWSE_FILE);
-
-//     //request the server
-
-//     if (chooser.show() == 0) {
-//         std::string filename = chooser.filename();
-//         FileManager fileManager;
-//         std::string content = fileManager.openFile(filename);
-//         editor->textBuffer->text(content.c_str());
-//     }
-// }
-
-
+// TO get the files from the server
 void TextEditorUI::cb_open(Fl_Widget* widget, void* data) {
     TextEditorUI* editor = (TextEditorUI*)data;
 
@@ -138,8 +119,9 @@ void TextEditorUI::cb_open(Fl_Widget* widget, void* data) {
 
             // Handle opening the selected remote file
             std::string content = editor->networkManager->load_file(selected_file); // Access editor
-            editor->textBuffer->text(content.c_str());  // Display the content in the text editor
-            //std::cout<<content;
+
+            // Display the content in the text editor
+            editor->textBuffer->text(content.c_str());  
 
         } else {
             fl_alert("No file selected!");
@@ -161,7 +143,7 @@ void TextEditorUI::cb_save(Fl_Widget* widget, void* data) {
         fl_alert("you must open a file before saving");
         return;
     }
-    std::string responce = editor->networkManager->send_command("SAVE",filename +"-"+std::string(editor->textBuffer->text()));
+    std::string responce = editor->networkManager->send_command("SAVE",filename );
     // diaplay the responce
     fl_alert(responce.c_str());
 
@@ -216,6 +198,7 @@ void TextEditorUI::cb_new(Fl_Widget* widget, void* data) {
     }
 }
 
+// Callback function for Quit
 void TextEditorUI::cb_quit(Fl_Widget* widget, void* data) {
     TextEditorUI* editor = (TextEditorUI*) data;
 
@@ -229,19 +212,6 @@ void TextEditorUI::cb_quit(Fl_Widget* widget, void* data) {
     }
     // Otherwise, do nothing (in case of responce equal to 0)
 }
-
-
-// Text change callback
-// void TextEditorUI::cb_text_changed(int pos, int inserted, int deleted, int restyled, const char* deleted_text, void* data) {
-//     TextEditorUI* editor = (TextEditorUI*) data;
-//     int x = editor->editor->insert_position();  // Current cursor position
-//     int y = 0; // Could map row/column later
-
-//     std::string changeOperation = editor->textBuffer->text_range(pos, pos + inserted);
-//     editor->networkManager->sendChangeToServer(changeOperation, x, y);
-// }
-
-
 
 void TextEditorUI::cb_text_changed(int pos, int inserted, int deleted, int restyled, const char* deleted_text, void* data) {
     TextEditorUI* editor = (TextEditorUI*) data;
@@ -263,5 +233,3 @@ void TextEditorUI::cb_text_changed(int pos, int inserted, int deleted, int resty
     // Send message to server
     editor->networkManager->sendChangeToServer(message);
 }
-
-
